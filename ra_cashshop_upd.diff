@@ -1,0 +1,977 @@
+Index: conf/log_athena.conf
+===================================================================
+--- conf/log_athena.conf	(revision 17227)
++++ conf/log_athena.conf	(working copy)
+@@ -27,6 +27,7 @@
+ // 0x08000 - (B) Log buying store transactions
+ // 0x10000 - (X) Log all other transcations (rentals expiring/inserting cards/items removed by item_check/
+ //           rings deleted by divorce/pet egg (un)hatching/pet armor (un)equipping/Weapon Refine skill/Remove Trap skill)
++// 0x20000 - ($) Log cash transactions
+ // Example: Log trades+vending+script items+created items: 1+2+32+1024 = 1059
+ // Please note that moving items from inventory to cart and back is not logged by design.
+ enable_logs: 0xFFFFF
+@@ -80,6 +81,11 @@
+ // 0 - don't log; 1 - log any zeny changes; 2.....1000000 - minimal absolut logging zeny value
+ log_zeny: 0
+ 
++// Track Cash Changes
++// 0 - don't log
++// 1 - log any changes
++log_cash: 1
++
+ // Log MVP Monster Drops (Note 1)
+ // Outdated. Use Pick_Log instead. But this log could be useful to keep track slayed MVPs
+ log_mvpdrop: no
+@@ -121,6 +127,7 @@
+ // log_npc_db: log/npclog.log
+ // log_pick_db: log/picklog.log
+ // log_zeny_db: log/zenylog.log
++// log_cash_db: log/cashlog.log
+ 
+ log_gm_db: atcommandlog
+ log_branch_db: branchlog
+@@ -129,5 +136,6 @@
+ log_npc_db: npclog
+ log_pick_db: picklog
+ log_zeny_db: zenylog
++log_cash_db: cashlog
+ 
+ import: conf/import/log_conf.txt
+Index: db/item_cash_db2.txt
+===================================================================
+--- db/item_cash_db2.txt	(revision 0)
++++ db/item_cash_db2.txt	(working copy)
+@@ -0,0 +1,17 @@
++// This file contains the items sold in the ingame cash shop
++//
++// The structure of the file is
++// type, item ID, price
++//
++// type:
++//    0: New
++//    1: Hot
++//    2: Limited
++//    3: Rental
++//    4: Gear
++//    5: Buff
++//    6: Heal
++//    7: Other
++//
++// price:
++//    price of the defined item in cash points
+\ No newline at end of file
+Index: db/packet_db.txt
+===================================================================
+--- db/packet_db.txt	(revision 17227)
++++ db/packet_db.txt	(working copy)
+@@ -1697,101 +1697,58 @@
+ 0x0838,12,searchstoreinfolistitemclick,2:6:10
+ 0x0439,8,useitem,2:4
+ 
+-//2012-04-10aRagexeRE
++//2013-03-20Ragexe (Judas)
+ packet_ver: 30
+ 0x01FD,15,repairitem,2
+-0x089C,26,friendslistadd,2
+-0x0885,5,hommenu,2:4
+-0x0961,36,storagepassword,0
+-0x0288,-1,cashshopbuy,4:8
+-0x091C,26,partyinvite2,2
+-0x094B,19,wanttoconnection,2:6:10:14:18
+-0x0369,7,actionrequest,2:6
+-0x083C,10,useskilltoid,2:4:6
+-0x0439,8,useitem,2:4
+-0x0945,-1,itemlistwindowselected,2:4:8
+-0x0815,-1,reqopenbuyingstore,2:4:8:9:89
+-0x0817,2,reqclosebuyingstore,0
+-0x0360,6,reqclickbuyingstore,2
+-0x0811,-1,reqtradebuyingstore,2:4:8:12
+-0x0819,-1,searchstoreinfo,2:4:5:9:13:14:15
+-0x0835,2,searchstoreinfonextpage,0
+-0x0838,12,searchstoreinfolistitemclick,2:6:10
+-0x0437,5,walktoxy,2
+-0x0886,6,ticksend,2
+-0x0871,5,changedir,2:4
+-0x0938,6,takeitem,2
+-0x0891,6,dropitem,2:4
+-0x086C,8,movetokafra,2:4
+-0x08A6,8,movefromkafra,2:4
+-0x0438,10,useskilltopos,2:4:6:8
+-0x0366,90,useskilltoposinfo,2:4:6:8:10
+-0x0889,6,getcharnamerequest,2
+-0x0884,6,solvecharname,2
+-0x08E5,41,bookingregreq,2:4	//Added to prevent disconnections
+-0x08E6,4
+-0x08E7,10,bookingsearchreq,2
+-0x08E8,-1
+-0x08E9,2,bookingdelreq,2
+-0x08EA,4
+-0x08EB,39,bookingupdatereq,2
+-0x08EC,73
+-0x08ED,43
+-0x08EE,6
+-0x08EF,6,bookingignorereq,2
+-0x08F0,6
+-0x08F1,6,bookingjoinpartyreq,2
+-0x08F2,36
+-0x08F3,-1
+-0x08F4,6
+-0x08F5,-1,bookingsummonmember,2:4
+-0x08F6,22
+-0x08F7,3
+-0x08F8,7
+-0x08F9,6
+-0x08FA,6
+-0x08FB,6,bookingcanceljoinparty,2
++0x086D,26,friendslistadd,2
++0x0897,5,hommenu,2:4
++0x0947,36,storagepassword,0
++//0x0288,-1,cashshopbuy,4:8
++0x086F,26,partyinvite2,2
++0x0888,19,wanttoconnection,2:6:10:14:18
++0x08c9,4
++0x088E,7,actionrequest,2:6
++0x089B,10,useskilltoid,2:4:6
++0x0881,5,walktoxy,2
++0x0363,6,ticksend,2
++0x093F,5,changedir,2:4
++0x0933,6,takeitem,2
++0x0438,6,dropitem,2:4
++0x08AC,8,movetokafra,2:4
++0x0874,8,movefromkafra,2:4
++0x0959,10,useskilltopos,2:4:6:8
++0x085A,90,useskilltoposinfo,2:4:6:8:10
++0x0898,6,getcharnamerequest,2
++0x094C,6,solvecharname,2
+ 0x0907,5,moveitem,2:4
+ 0x0908,5
+-0x08D7,28,battlegroundreg,2:4 //Added to prevent disconnections
+ 0x08CF,10 //Amulet spirits
++0x08d2,10
+ 0x0977,14 //Monster HP Bar
++0x0998,8,equipitem,2:4
++0x0938,-1,reqopenbuyingstore,2:4:8:9:89
++//0x0817,2,reqclosebuyingstore,0
++//0x0360,6,reqclickbuyingstore,2
++0x0922,-1,reqtradebuyingstore,2:4:8:12
++0x094E,-1,searchstoreinfo,2:4:5:9:13:14:15
++//0x0835,2,searchstoreinfonextpage,0
++0x0868,-1,itemlistwindowselected,2:4:8
++0x0983,29
++0x0984,28
++0x0980,7
++0x0981,-1
++0x0982,7
++0x0985,-1
++0x0986,6
++0x08ff,24
++// Lemongrass
++0x085d,18,bookingregreq,2:4:6
+ 
+-//2012-04-18aRagexeRE [Special Thanks to Judas!]
+-packet_ver:31
+-0x023B,26,friendslistadd,2
+-0x0361,5,hommenu,2:4
+-0x08A8,36,storagepassword,0
+-0x0802,26,partyinvite2,2
+-0x022D,19,wanttoconnection,2:6:10:14:18
+-0x0281,-1,itemlistwindowselected,2:4:8
+-0x035F,6,ticksend,2
+-0x0202,5,changedir,2:4
+-0x07E4,6,takeitem,2
+-0x0362,6,dropitem,2:4
+-0x07EC,8,movetokafra,2:4
+-0x0364,8,movefromkafra,2:4
+-0x096A,6,getcharnamerequest,2
+-0x0368,6,solvecharname,2
+-0x08E5,41,bookingregreq,2:4     //Added to prevent disconnections
+-0x08d2,10
++// New cashshop
++0x0844,2,cashshopopen,0
++0x084a,2,cashshopclose,0
++0x08c9,4,cashshopitemlist,0
++0x0848,-1,cashshopbuy,0
+ 
+-//2012-07-02aRagexeRE (unstable)
+-packet_ver: 32
+-0x0363,19,wanttoconnection,2:6:10:14:18
+-0x0364,6,ticksend,2
+-0x085a,7,actionrequest,2:6
+-0x0861,8,movefromkafra,2:4
+-0x0862,10,useskilltoid,2:4:6
+-0x0863,10,useskilltopos,2:4:6:8
+-0x0886,6,solvecharname,2
+-0x0889,90,useskilltoposinfo,2:4:6:8:10
+-0x089e,6,dropitem,2:4
+-0x089f,6,takeitem,2
+-0x08a0,8,movetokafra,2:4
+-0x094a,6,getcharnamerequest,2
+-0x0953,5,walktoxy,2
+-0x0960,5,changedir,2:4
+-
+ //Add new packets here
+-//packet_ver: 33
++//packet_ver: 34
+Index: db/pre-re/item_cash_db.txt
+===================================================================
+--- db/pre-re/item_cash_db.txt	(revision 0)
++++ db/pre-re/item_cash_db.txt	(working copy)
+@@ -0,0 +1,17 @@
++// This file contains the items sold in the ingame cash shop
++//
++// The structure of the file is
++// type, item ID, price
++//
++// type:
++//    0: New
++//    1: Hot
++//    2: Limited
++//    3: Rental
++//    4: Gear
++//    5: Buff
++//    6: Heal
++//    7: Other
++//
++// price:
++//    price of the defined item in cash points
+\ No newline at end of file
+Index: db/re/item_cash_db.txt
+===================================================================
+--- db/re/item_cash_db.txt	(revision 0)
++++ db/re/item_cash_db.txt	(working copy)
+@@ -0,0 +1,17 @@
++// This file contains the items sold in the ingame cash shop
++//
++// The structure of the file is
++// type, item ID, price
++//
++// type:
++//    0: New
++//    1: Hot
++//    2: Limited
++//    3: Rental
++//    4: Gear
++//    5: Buff
++//    6: Heal
++//    7: Other
++//
++// price:
++//    price of the defined item in cash points
+\ No newline at end of file
+Index: src/common/mmo.h
+===================================================================
+--- src/common/mmo.h	(revision 17227)
++++ src/common/mmo.h	(working copy)
+@@ -46,7 +46,7 @@
+ // 20120307 - 2012-03-07aRagexeRE+ - 0x970
+ 
+ #ifndef PACKETVER
+-	#define PACKETVER 20120410
++	#define PACKETVER 20130320
+ 	//#define PACKETVER 20111116
+ #endif
+ 
+Index: src/map/cashshop.c
+===================================================================
+--- src/map/cashshop.c	(revision 0)
++++ src/map/cashshop.c	(working copy)
+@@ -0,0 +1,296 @@
++// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
++// For more information, see LICENCE in the main folder
++
++#include "../common/strlib.h" // sv_readdb
++#include "../common/malloc.h" // CREATE, RECREATE, aFree
++#include "../common/nullpo.h" // nullpo_retv
++#include "../common/showmsg.h" // ShowWarning, ShowStatus
++
++#include "cashshop.h"
++#include "clif.h" // clif_cashshop_result
++#include "itemdb.h" // itemdb_exists, itemdb_isstackable, itemdb_weight, itemdb_type
++#include "map.h" // struct map_session_data
++#include "npc.h"
++#include "pc.h" // pc_checkadditem, pc_paycash, pc_additem
++#include "pet.h" // pet_create_egg
++
++#include <string.h> // memset
++#include <stdlib.h> // atoi
++
++static int cashshop_parse_dbrow( char** str, const char* source, int line );
++
++struct cash_item_db cash_shop_items[CASHSHOP_TAB_SEARCH];
++
++static void cashshop_read_db_txt( void ){
++	const char* filename[] = { DBPATH"item_cash_db.txt", "item_cash_db2.txt" };
++	int fi;
++
++	for( fi = 0; fi < ARRAYLENGTH( filename ); ++fi ){
++		uint32 lines = 0, count = 0;
++		char line[1024];
++
++		char path[256];
++		FILE* fp;
++
++		sprintf( path, "%s/%s", db_path, filename[fi] );
++		fp = fopen( path, "r" );
++		if( fp == NULL ) {
++			ShowWarning( "itemdb_readdb: File not found \"%s\", skipping.\n", path );
++			continue;
++		}
++
++		while( fgets( line, sizeof( line ), fp ) ){
++			char *str[3], *p;
++			int i;
++			lines++;
++
++			if( line[0] == '/' && line[1] == '/' )
++				continue;
++
++			memset( str, 0, sizeof( str ) );
++
++			p = line;
++			while( ISSPACE( *p ) )
++				++p;
++			if( *p == '\0' )
++				continue;
++
++			for( i = 0; i < 2; ++i ){
++				str[i] = p;
++				p = strchr( p, ',' );
++
++				if( p == NULL )
++					break;
++
++				*p = '\0';
++				++p;
++			}
++
++			str[2] = p;
++			while( !ISSPACE( *p ) && *p != '\0' && *p != '/' )
++				++p;
++
++			if( p == NULL ){
++				ShowError("cashshop_read_db_txt: Insufficient columns in line %d of \"%s\" (item with id %d), skipping.\n", lines, path, atoi( str[0] ) );
++				continue;
++			}
++
++			if( !cashshop_parse_dbrow( str, path, lines ) )
++				continue;
++			
++			count++;
++		}
++
++		fclose(fp);
++
++		ShowStatus( "Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", count, filename[fi] );
++	}
++}
++
++static int cashshop_read_db_sql( void ){
++	const char* cash_db_name[] = { "cash_item_db", "cash_item_db2" };
++	int fi;
++	
++	for( fi = 0; fi < ARRAYLENGTH( cash_db_name ); ++fi ){
++		uint32 lines = 0, count = 0;
++
++		if( SQL_ERROR == Sql_Query( mmysql_handle, "SELECT `tab`, `item_id`, `price` FROM `%s`", cash_db_name[fi] ) ){
++			Sql_ShowDebug( mmysql_handle );
++			continue;
++		}
++
++		while( SQL_SUCCESS == Sql_NextRow( mmysql_handle ) ){
++			char* str[3];
++			int i;
++
++			++lines;
++
++			for( i = 0; i < 3; ++i ){
++				Sql_GetData( mmysql_handle, i, &str[i], NULL );
++
++				if( str[i] == NULL ){
++					str[i] = "";
++				}
++			}
++
++			if( !cashshop_parse_dbrow( str, cash_db_name[fi], lines ) )
++				continue;
++
++			++count;
++		}
++
++		Sql_FreeResult( mmysql_handle );
++
++		ShowStatus( "Done reading '"CL_WHITE"%lu"CL_RESET"' entries in '"CL_WHITE"%s"CL_RESET"'.\n", count, cash_db_name[fi] );
++	}
++
++	return 0;
++}
++
++static void cashshop_read_db( void ){
++	if( db_use_sqldbs ){
++		cashshop_read_db_sql();
++	}else{
++		cashshop_read_db_txt();
++	}
++}
++
++static int cashshop_parse_dbrow( char** str, const char* source, int line ){
++	uint32 nameid = atoi( str[1] );
++
++	if( itemdb_exists( nameid ) ){
++		uint16 tab = atoi( str[0] );
++		uint32 price = atoi( str[2] );
++		struct cash_item_data* cid;
++		int j;
++
++		if( tab > CASHSHOP_TAB_SEARCH ){
++			ShowWarning( "cashshop_parse_dbrow: Invalid tab %d in line %d of \"%s\", skipping.\n", tab, line, source );
++			return 0;
++		}else if( price < 1 ){
++			ShowWarning( "cashshop_parse_dbrow: Invalid price %d in line %d of \"%s\", skipping.\n", price, line, source );
++			return 0;
++		}
++
++		ARR_FIND( 0, cash_shop_items[tab].count, j, nameid == cash_shop_items[tab].item[j]->nameid );
++
++		if( j == cash_shop_items[tab].count ){
++			RECREATE( cash_shop_items[tab].item, struct cash_item_data *, ++cash_shop_items[tab].count );
++			CREATE( cash_shop_items[tab].item[ cash_shop_items[tab].count - 1], struct cash_item_data, 1 );
++			cid = cash_shop_items[tab].item[ cash_shop_items[tab].count - 1];
++		}else{
++			cid = cash_shop_items[tab].item[j];
++		}
++
++		cid->nameid = nameid;
++		cid->price = price;
++
++		return 1;
++	}else{
++		ShowWarning( "cashshop_parse_dbrow: Invalid id %d in line %d of \"%s\", skipping.\n", nameid, line, source );
++	}
++
++	return 0;
++}
++
++void cashshop_buylist( struct map_session_data* sd, int n, uint16* item_list ){
++	uint32 totalcash = 0;
++	uint32 totalweight = 0;
++	int i,new_;
++
++	nullpo_retv( sd );
++	nullpo_retv( item_list );
++
++	if( sd->state.trading ){
++		clif_cashshop_result( sd, 0, CASHSHOP_RESULT_ERROR_PC_STATE );
++		return;
++	}
++
++	new_ = 0;
++
++	for( i = 0; i < n; ++i ){
++		uint32 nameid = *( item_list + i * 5 );
++		uint32 quantity = *( item_list + i * 5 + 2 );
++		uint16 tab = *( item_list + i * 5 + 4 );
++		int j;
++
++		if( tab > CASHSHOP_TAB_SEARCH ){
++			clif_cashshop_result( sd, nameid, CASHSHOP_RESULT_ERROR_UNKNOWN );
++			return;
++		}
++
++		ARR_FIND( 0, cash_shop_items[tab].count, j, nameid == cash_shop_items[tab].item[j]->nameid );
++
++		if( j == cash_shop_items[tab].count || !itemdb_exists( nameid ) ){
++			clif_cashshop_result( sd, nameid, CASHSHOP_RESULT_ERROR_UNKNOWN );
++			return;
++		}else if( !itemdb_isstackable( nameid ) && quantity > 1 ){
++			uint32* quantity_ptr = (uint32*)item_list + i * 5 + 2;
++			ShowWarning("Player %s (%d:%d) sent a hexed packet trying to buy %d of nonstackable cash item %d!\n", sd->status.name, sd->status.account_id, sd->status.char_id, quantity, nameid );
++			*quantity_ptr = 1;
++		}
++
++		switch( pc_checkadditem( sd, nameid, quantity ) ){
++			case ADDITEM_EXIST:
++				break;
++
++			case ADDITEM_NEW:
++				new_++;
++				break;
++
++			case ADDITEM_OVERAMOUNT:
++				clif_cashshop_result( sd, nameid, CASHSHOP_RESULT_ERROR_OVER_PRODUCT_TOTAL_CNT );
++				return;
++		}
++
++		totalcash += cash_shop_items[tab].item[j]->price * quantity;
++		totalweight += itemdb_weight( nameid ) * quantity;
++	}
++
++	// TODO: add kafra points substraction
++
++	if( totalcash > sd->cashPoints ){
++		clif_cashshop_result( sd, 0, CASHSHOP_RESULT_ERROR_SHORTTAGE_CASH );
++		return;
++	}else if( ( totalweight + sd->weight ) > sd->max_weight ){
++		clif_cashshop_result( sd, 0, CASHSHOP_RESULT_ERROR_INVENTORY_WEIGHT );
++		return;
++	}else if( pc_inventoryblank( sd ) < new_ ){
++		clif_cashshop_result( sd, 0, CASHSHOP_RESULT_ERROR_INVENTORY_ITEMCNT );
++		return;
++	}
++
++	pc_paycash( sd, totalcash, 0 );
++
++	for( i = 0; i < n; ++i ){
++		uint32 nameid = *( item_list + i * 5 );
++		uint32 quantity = *( item_list + i * 5 + 2 );
++
++		if( itemdb_type( nameid ) == IT_PETEGG ){
++			pet_create_egg( sd, nameid );
++		}else{
++			struct item item_tmp;
++			memset( &item_tmp, 0, sizeof( item_tmp ) );
++
++			item_tmp.nameid = nameid;
++			item_tmp.identify = 1;
++
++			switch( pc_additem( sd, &item_tmp, quantity, LOG_TYPE_CASH ) ){
++				case 2:
++					clif_cashshop_result( sd, nameid, CASHSHOP_RESULT_ERROR_INVENTORY_WEIGHT );
++					return;
++				case 4:
++					clif_cashshop_result( sd, nameid, CASHSHOP_RESULT_ERROR_INVENTORY_ITEMCNT );
++					return;
++				case 5:
++					clif_cashshop_result( sd, nameid, CASHSHOP_RESULT_ERROR_OVER_PRODUCT_TOTAL_CNT );
++					return;
++				case 7:
++					clif_cashshop_result( sd, nameid, CASHSHOP_RESULT_ERROR_RUNE_OVERCOUNT );
++					return;
++			}
++		}
++	}
++
++	clif_cashshop_result( sd, 0, CASHSHOP_RESULT_SUCCESS );
++}
++
++int do_final_cashshop( void ){
++	int tab, i;
++
++	for( tab = CASHSHOP_TAB_NEW; tab < CASHSHOP_TAB_SEARCH; tab++ ){
++		for( i = 0; i < cash_shop_items[tab].count; i++ ){
++			aFree( cash_shop_items[tab].item[i] );
++		}
++
++		aFree( cash_shop_items[tab].item );
++	}
++
++	return 0;
++}
++
++int do_init_cashshop( void ){
++	cashshop_read_db();
++
++	return 0;
++}
+\ No newline at end of file
+Index: src/map/cashshop.h
+===================================================================
+--- src/map/cashshop.h	(revision 0)
++++ src/map/cashshop.h	(working copy)
+@@ -0,0 +1,54 @@
++// Copyright (c) Athena Dev Teams - Licensed under GNU GPL
++// For more information, see LICENCE in the main folder
++
++#ifndef _CASHSHOP_H_
++#define _CASHSHOP_H_
++
++int do_init_cashshop( void );
++int do_final_cashshop( void );
++void cashshop_buylist( struct map_session_data* sd, int n, uint16* item_list );
++
++// Taken from AEGIS
++enum CASH_SHOP_TAB_CODE{
++	CASHSHOP_TAB_NEW =  0x0,
++	CASHSHOP_TAB_POPULAR =  0x1,
++	CASHSHOP_TAB_LIMITED =  0x2,
++	CASHSHOP_TAB_RENTAL =  0x3,
++	CASHSHOP_TAB_PERPETUITY =  0x4,
++	CASHSHOP_TAB_BUFF =  0x5,
++	CASHSHOP_TAB_RECOVERY =  0x6,
++	CASHSHOP_TAB_ETC =  0x7,
++	CASHSHOP_TAB_SEARCH =  0x8
++};
++
++// PACKET_ZC_SE_PC_BUY_CASHITEM_RESULT
++enum CASHSHOP_BUY_RESULT{
++	CASHSHOP_RESULT_SUCCESS =  0x0,
++	CASHSHOP_RESULT_ERROR_SYSTEM =  0x1,
++	CASHSHOP_RESULT_ERROR_SHORTTAGE_CASH =  0x2,
++	CASHSHOP_RESULT_ERROR_UNKONWN_ITEM =  0x3,
++	CASHSHOP_RESULT_ERROR_INVENTORY_WEIGHT =  0x4,
++	CASHSHOP_RESULT_ERROR_INVENTORY_ITEMCNT =  0x5,
++	CASHSHOP_RESULT_ERROR_PC_STATE =  0x6,
++	CASHSHOP_RESULT_ERROR_OVER_PRODUCT_TOTAL_CNT =  0x7,
++	CASHSHOP_RESULT_ERROR_SOME_BUY_FAILURE =  0x8,
++	CASHSHOP_RESULT_ERROR_RUNE_OVERCOUNT =  0x9,
++	CASHSHOP_RESULT_ERROR_EACHITEM_OVERCOUNT =  0xa,
++	CASHSHOP_RESULT_ERROR_UNKNOWN =  0xb,
++	CASHSHOP_RESULT_ERROR_BUSY =  0xc,
++};
++
++
++struct cash_item_data{
++	uint32 nameid;
++	uint32 price;
++};
++
++struct cash_item_db{
++	struct cash_item_data** item;
++	uint32 count;
++};
++
++extern struct cash_item_db cash_shop_items[CASHSHOP_TAB_SEARCH];
++
++#endif /* _CASHSHOP_H_ */
+\ No newline at end of file
+Index: src/map/clif.c
+===================================================================
+--- src/map/clif.c	(revision 17227)
++++ src/map/clif.c	(working copy)
+@@ -42,6 +42,7 @@
+ #include "clif.h"
+ #include "mail.h"
+ #include "quest.h"
++#include "cashshop.h"
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -14424,13 +14425,13 @@
+ 	WFIFOSET(fd, packet_len(0x289));
+ }
+ 
+-
++// TODO: change this
++#if PACKETVER < 20130000
+ /// Request to buy item(s) from cash shop (CZ_PC_BUY_CASH_POINT_ITEM).
+ /// 0288 <name id>.W <amount>.W
+ /// 0288 <name id>.W <amount>.W <kafra points>.L (PACKETVER >= 20070711)
+ /// 0288 <packet len>.W <kafra points>.L <count>.W { <amount>.W <name id>.W }.4B*count (PACKETVER >= 20100803)
+-void clif_parse_cashshop_buy(int fd, struct map_session_data *sd)
+-{
++void clif_parse_cashshop_buy(int fd, struct map_session_data *sd){
+     int fail = 0;
+     nullpo_retv(sd);
+ 
+@@ -14457,10 +14458,10 @@
+         }
+         fail = npc_cashshop_buylist(sd,points,count,item_list);
+ #endif
+-    }
+ 
+-    clif_cashshop_ack(sd,fail);
++		clif_cashshop_ack(sd,fail);
+ }
++#endif
+ 
+ 
+ /// Adoption System
+@@ -16372,6 +16373,72 @@
+ #endif
+ }
+ 
++void clif_cashshop_open( struct map_session_data* sd ){
++	WFIFOHEAD( sd->fd, 10 );
++	WFIFOW( sd->fd, 0 ) = 0x845;
++	WFIFOL( sd->fd, 2 ) = sd->cashPoints;
++	WFIFOL( sd->fd, 6 ) = 0; // TODO: Kafra cash?
++	WFIFOSET( sd->fd, 10 );
++}
++
++void clif_parse_cashshop_open_request( int fd, struct map_session_data* sd ){
++	clif_cashshop_open( sd );
++}
++
++void clif_parse_cashshop_close( int fd, struct map_session_data* sd ){
++
++}
++
++void clif_cashshop_list( int fd ){
++	int tab;
++
++	for( tab = CASHSHOP_TAB_NEW; tab < CASHSHOP_TAB_SEARCH; tab++ ){
++		int length = 8 + cash_shop_items->count * 6;
++		int i, offset;
++
++		WFIFOHEAD( fd, length );
++		WFIFOW( fd, 0 ) = 0x8ca;
++		WFIFOW( fd, 2 ) = length;
++		WFIFOW( fd, 4 ) = cash_shop_items[tab].count;
++		WFIFOW( fd, 6 ) = tab;
++
++		for( i = 0, offset = 8; i < cash_shop_items[tab].count; i++, offset += 6 ){
++			WFIFOW( fd, offset ) = cash_shop_items[tab].item[i]->nameid;
++			WFIFOL( fd, offset + 2 ) = cash_shop_items[tab].item[i]->price;
++		}
++
++		WFIFOSET( fd, length );
++	}
++}
++
++void clif_parse_cashshop_list_request( int fd, struct map_session_data* sd ){
++	clif_cashshop_list( fd );
++}
++
++// TODO: change this
++#if PACKETVER > 20121231
++void clif_parse_cashshop_buy( int fd, struct map_session_data *sd ){
++	uint16 length = RFIFOW( fd, 2 );
++	uint32 count = RFIFOL( fd, 4 );
++
++	if( length < 8 || length < ( 8 + count * 6 ) ){
++		return;
++	}
++
++	cashshop_buylist( sd, count, (uint16 *)RFIFOP( fd, 10 ) );
++}
++#endif
++
++void clif_cashshop_result( struct map_session_data *sd, uint16 item_id, uint16 result ){
++	WFIFOHEAD( sd->fd, 16 );
++	WFIFOW( sd->fd, 0 ) = 0x849;
++	WFIFOL( sd->fd, 2 ) = item_id;
++	WFIFOW( sd->fd, 6 ) = result;
++	WFIFOL( sd->fd, 8 ) = sd->cashPoints;
++	WFIFOL( sd->fd, 12 ) = 0; // TODO: kafra points
++	WFIFOSET( sd->fd, 16 ); 
++}
++
+ /*==========================================
+  * Main client packet processing function
+  *------------------------------------------*/
+@@ -16948,7 +17015,6 @@
+ 		{clif_parse_Auction_bid,"auctionbid"},
+ 		// Quest Log System
+ 		{clif_parse_questStateAck,"queststate"},
+-		{clif_parse_cashshop_buy,"cashshopbuy"},
+ 		{clif_parse_ViewPlayerEquip,"viewplayerequip"},
+ 		{clif_parse_EquipTick,"equiptickbox"},
+ 		{clif_parse_BattleChat,"battlechat"},
+@@ -16974,6 +17040,11 @@
+ 		{clif_parse_SearchStoreInfoNextPage,"searchstoreinfonextpage"},
+ 		{clif_parse_CloseSearchStoreInfo,"closesearchstoreinfo"},
+ 		{clif_parse_SearchStoreInfoListItemClick,"searchstoreinfolistitemclick"},
++		// Cashshop
++		{ clif_parse_cashshop_open_request, "cashshopopen" },
++		{ clif_parse_cashshop_close, "cashshopclose" },
++		{ clif_parse_cashshop_list_request, "cashshopitemlist" },
++		{ clif_parse_cashshop_buy, "cashshopbuy" },
+ 		/* */
+ 		{ clif_parse_MoveItem , "moveitem" },
+ 		{NULL,NULL}
+Index: src/map/clif.h
+===================================================================
+--- src/map/clif.h	(revision 17227)
++++ src/map/clif.h	(working copy)
+@@ -725,6 +725,11 @@
+ void clif_search_store_info_failed(struct map_session_data* sd, unsigned char reason);
+ void clif_open_search_store_info(struct map_session_data* sd);
+ void clif_search_store_info_click_ack(struct map_session_data* sd, short x, short y);
++
++/// Cash Shop
++void clif_cashshop_result( struct map_session_data* sd, uint16 item_id, uint16 result );
++void clif_cashshop_open( struct map_session_data* sd );
++
+ /**
+  * 3CeAM
+  **/
+Index: src/map/itemdb.h
+===================================================================
+--- src/map/itemdb.h	(revision 17227)
++++ src/map/itemdb.h	(working copy)
+@@ -130,6 +130,7 @@
+ 		unsigned trade_restriction : 9;	//Item restrictions mask [Skotlex]
+ 		unsigned autoequip: 1;
+ 		unsigned buyingstore : 1;
++		unsigned cash : 1;
+ 	} flag;
+ 	struct {// item stacking limitation
+ 		unsigned short amount;
+Index: src/map/log.c
+===================================================================
+--- src/map/log.c	(revision 17227)
++++ src/map/log.c	(working copy)
+@@ -74,6 +74,7 @@
+ 		case LOG_TYPE_BUYING_STORE:     return 'B';  // (B)uying Store
+ 		case LOG_TYPE_LOOT:             return 'L';  // (L)oot (consumed monster pick/drop)
+ 		case LOG_TYPE_OTHER:			return 'X';  // Other
++		case LOG_TYPE_CASH:				return '$';  // Cash
+ 	}
+ 
+ 	// should not get here, fallback
+@@ -456,7 +457,42 @@
+ 	}
+ }
+ 
++/// logs cash transactions
++void log_cash( struct map_session_data* sd, e_log_pick_type type, struct map_session_data* src_sd, int amount ){
++	nullpo_retv( sd );
+ 
++	if( !log_config.cash )
++		return;
++
++	if( log_config.sql_logs ){
++#ifdef BETA_THREAD_TEST
++		char entry[512];
++		int e_length = 0;
++		e_length = sprintf( entry,  LOG_QUERY " INTO `%s` ( `time`, `char_id`, `src_id`, `type`, `amount`, `map` ) VALUES ( NOW(), '%d', '%d', '%c', '%d', '%s' )",
++				log_config.log_cash, sd->status.char_id, src_sd->status.char_id, log_picktype2char( type ), amount, mapindex_id2name( sd->mapindex ) );
++		queryThread_log( entry, e_length );
++#else
++		if( SQL_ERROR == Sql_Query( logmysql_handle, LOG_QUERY " INTO `%s` ( `time`, `char_id`, `src_id`, `type`, `amount`, `map` ) VALUES ( NOW(), '%d', '%d', '%c', '%d', '%s' )",
++			log_config.log_cash, sd->status.char_id, src_sd->status.char_id, log_picktype2char( type ), amount, mapindex_id2name( sd->mapindex ) ) )
++		{
++			Sql_ShowDebug( logmysql_handle );
++			return;
++		}
++#endif
++	}else{
++		char timestring[255];
++		time_t curtime;
++		FILE* logfp;
++
++		if( ( logfp = fopen( log_config.log_cash, "a" ) ) == NULL )
++			return;
++		time( &curtime );
++		strftime( timestring, sizeof( timestring ), "%m/%d/%Y %H:%M:%S", localtime( &curtime ) );
++		fprintf( logfp, "%s - %s[%d]\t%s[%d]\t%d\t\n", timestring, src_sd->status.name, src_sd->status.account_id, sd->status.name, sd->status.account_id, amount );
++		fclose( logfp );
++	}
++}
++
+ void log_set_defaults(void)
+ {
+ 	memset(&log_config, 0, sizeof(log_config));
+@@ -511,6 +547,8 @@
+ 				log_config.filter = config_switch(w2);
+ 			else if( strcmpi(w1, "log_zeny") == 0 )
+ 				log_config.zeny = config_switch(w2);
++			else if( strcmpi( w1, "log_cash" ) == 0 )
++				log_config.cash = config_switch( w2 );
+ 			else if( strcmpi(w1, "log_commands") == 0 )
+ 				log_config.commands = config_switch(w2);
+ 			else if( strcmpi(w1, "log_npc") == 0 )
+@@ -535,6 +573,8 @@
+ 				safestrncpy(log_config.log_npc, w2, sizeof(log_config.log_npc));
+ 			else if( strcmpi(w1, "log_chat_db") == 0 )
+ 				safestrncpy(log_config.log_chat, w2, sizeof(log_config.log_chat));
++			else if( strcmpi( w1, "log_cash_db" ) == 0 )
++				safestrncpy( log_config.log_cash, w2, sizeof( log_config.log_cash ) );
+ 			//support the import command, just like any other config
+ 			else if( strcmpi(w1,"import") == 0 )
+ 				log_config_read(w2);
+@@ -577,6 +617,9 @@
+ 		{
+ 			ShowInfo("Logging Zeny transactions to %s '%s'.\n", target, log_config.log_zeny);
+ 		}
++		if( log_config.cash ){
++			ShowInfo( "Logging Cash transactions to %s '%s'.\n", target, log_config.log_cash );
++		}
+ 	}
+ 
+ 	return 0;
+Index: src/map/log.h
+===================================================================
+--- src/map/log.h	(revision 17227)
++++ src/map/log.h	(working copy)
+@@ -44,6 +44,7 @@
+ 	LOG_TYPE_AUCTION          = 0x04000,
+ 	LOG_TYPE_BUYING_STORE     = 0x08000,
+ 	LOG_TYPE_OTHER            = 0x10000,
++	LOG_TYPE_CASH			  = 0x20000,
+ 	// combinations
+ 	LOG_TYPE_LOOT             = LOG_TYPE_PICKDROP_MONSTER|LOG_TYPE_CONSUME,
+ 	// all
+@@ -51,12 +52,11 @@
+ }
+ e_log_pick_type;
+ 
+-
+ /// new logs
+ void log_pick_pc(struct map_session_data* sd, e_log_pick_type type, int amount, struct item* itm);
+ void log_pick_mob(struct mob_data* md, e_log_pick_type type, int amount, struct item* itm);
+ void log_zeny(struct map_session_data* sd, e_log_pick_type type, struct map_session_data* src_sd, int amount);
+-
++void log_cash( struct map_session_data* sd, e_log_pick_type type, struct map_session_data* src_sd, int amount );
+ void log_npc(struct map_session_data* sd, const char *message);
+ void log_chat(e_log_chat_type type, int type_id, int src_charid, int src_accid, const char* map, int x, int y, const char* dst_charname, const char* message);
+ void log_atcommand(struct map_session_data* sd, const char* message);
+@@ -73,9 +73,10 @@
+ 	int filter;
+ 	bool sql_logs;
+ 	bool log_chat_woe_disable;
++	bool cash;
+ 	int rare_items_log,refine_items_log,price_items_log,amount_items_log; //for filter
+ 	int branch, mvpdrop, zeny, commands, npc, chat;
+-	char log_branch[64], log_pick[64], log_zeny[64], log_mvpdrop[64], log_gm[64], log_npc[64], log_chat[64];
++	char log_branch[64], log_pick[64], log_zeny[64], log_mvpdrop[64], log_gm[64], log_npc[64], log_chat[64], log_cash[64];
+ }
+ log_config;
+ 
+Index: src/map/map.c
+===================================================================
+--- src/map/map.c	(revision 17227)
++++ src/map/map.c	(working copy)
+@@ -46,6 +46,7 @@
+ #include "atcommand.h"
+ #include "log.h"
+ #include "mail.h"
++#include "cashshop.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -3596,6 +3597,7 @@
+ 	do_final_battleground();
+ 	do_final_duel();
+ 	do_final_elemental();
++	do_final_cashshop();
+ 
+ 	map_db->destroy(map_db, map_db_final);
+ 
+@@ -3795,6 +3797,7 @@
+ 	do_init_clif();
+ 	do_init_script();
+ 	do_init_itemdb();
++	do_init_cashshop();
+ 	do_init_skill();
+ 	do_init_mob();
+ 	do_init_pc();
+Index: src/map/pc.c
+===================================================================
+--- src/map/pc.c	(revision 17227)
++++ src/map/pc.c	(working copy)
+@@ -3690,7 +3690,9 @@
+ 	}
+ 
+ 	pc_setaccountreg(sd, "#CASHPOINTS", sd->cashPoints-cash);
++	log_cash( sd, LOG_TYPE_CASH, sd, -cash );
+ 	pc_setaccountreg(sd, "#KAFRAPOINTS", sd->kafraPoints-points);
++	log_cash( sd, LOG_TYPE_NPC, sd, -points );
+ 
+ 	if( battle_config.cashshop_show_points )
+ 	{
+@@ -3717,6 +3719,7 @@
+ 		}
+ 
+ 		pc_setaccountreg(sd, "#CASHPOINTS", sd->cashPoints+cash);
++		log_cash( sd, LOG_TYPE_CASH, sd, cash );
+ 
+ 		if( battle_config.cashshop_show_points )
+ 		{
+@@ -3740,6 +3743,7 @@
+ 		}
+ 
+ 		pc_setaccountreg(sd, "#KAFRAPOINTS", sd->kafraPoints+points);
++		log_cash( sd, LOG_TYPE_NPC, sd, points );
+ 
+ 		if( battle_config.cashshop_show_points )
+ 		{
